@@ -1,10 +1,9 @@
-use serde::{self, Serialize, Deserialize};
+use serde::{self, Deserialize, Serialize};
 use serde_json::Value;
 
-use super::{InitData, RequestBody, ResponseBody};
+use super::{InitData, RequestBody};
 
 pub type RequestMessage = super::Message<RequestBody<RequestData>>;
-pub type ResponseMessage = super::Message<ResponseBody<ResponseData>>;
 
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
