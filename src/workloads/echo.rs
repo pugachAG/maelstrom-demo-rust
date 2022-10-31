@@ -1,31 +1,31 @@
-use crate::{io::NodeIo, protocol::echo::*};
+use crate::{protocol::echo::*, io::{receive_msg, send_msg}};
 
-pub fn run(io: &impl NodeIo) {
+pub fn run() {
     eprintln!("Running echo workload");
-    init(io);
+    init();
     loop {
-        handle_echo(io);
+        handle_echo();
     }
 }
 
-fn init(io: &impl NodeIo) {
-    let msg: Message = io.receive();
+fn init() {
+    let msg: Message = receive_msg();
     if let BodyData::Init(ref init) = msg.body.data {
         eprintln!("Init node {}", init.node_id);
         let resp_msg = msg.create_response(BodyData::InitOk);
-        io.send(&resp_msg);
+        send_msg(&resp_msg);
     } else {
         panic!("Expected init msg");
     }
 }
 
-fn handle_echo(io: &impl NodeIo) {
-    let msg: Message = io.receive();
+fn handle_echo() {
+    let msg: Message = receive_msg();
     if let BodyData::Echo(ref echo_data) = msg.body.data {
         let resp_msg = msg.create_response(BodyData::EchoOk(EchoData {
             echo: echo_data.echo.clone(),
         }));
-        io.send(&resp_msg);
+        send_msg(&resp_msg);
     } else {
         panic!("Expected echo msg");
     }
