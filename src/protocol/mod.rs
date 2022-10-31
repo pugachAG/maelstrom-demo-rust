@@ -7,16 +7,10 @@ pub mod echo;
 pub type MessageId = usize;
 
 #[derive(Debug, Serialize, Deserialize)]
-pub struct RequestBody<T> {
+pub struct Body<T> {
     pub msg_id: MessageId,
-    #[serde(flatten)]
-    pub data: T,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct ResponseBody<T> {
-    pub msg_id: MessageId,
-    pub in_reply_to: MessageId,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub in_reply_to: Option<MessageId>,
     #[serde(flatten)]
     pub data: T,
 }
@@ -37,15 +31,15 @@ pub struct Message<T> {
     pub body: T,
 }
 
-impl<T> Message<RequestBody<T>> {
-    pub fn create_response<D>(&self, data: D) -> Message<ResponseBody<D>> {
+impl<T> Message<Body<T>> {
+    pub fn create_response<D>(&self, data: D) -> Message<Body<D>> {
         Message {
             src: self.dest.clone(),
             dest: self.src.clone(),
-            body: ResponseBody {
+            body: Body {
                 data,
                 msg_id: gen_next_msg_id(),
-                in_reply_to: self.body.msg_id,
+                in_reply_to: Some(self.body.msg_id),
             },
         }
     }

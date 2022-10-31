@@ -9,10 +9,10 @@ pub fn run(io: &impl NodeIo) {
 }
 
 fn init(io: &impl NodeIo) {
-    let msg: RequestMessage = io.receive();
-    if let RequestData::Init(ref init) = msg.body.data {
+    let msg: Message = io.receive();
+    if let BodyData::Init(ref init) = msg.body.data {
         eprintln!("Init node {}", init.node_id);
-        let resp_msg = msg.create_response(ResponseData::InitOk);
+        let resp_msg = msg.create_response(BodyData::InitOk);
         io.send(&resp_msg);
     } else {
         panic!("Expected init msg");
@@ -20,9 +20,9 @@ fn init(io: &impl NodeIo) {
 }
 
 fn handle_echo(io: &impl NodeIo) {
-    let msg: RequestMessage = io.receive();
-    if let RequestData::Echo(ref echo_data) = msg.body.data {
-        let resp_msg = msg.create_response(ResponseData::EchoOk(EchoData {
+    let msg: Message = io.receive();
+    if let BodyData::Echo(ref echo_data) = msg.body.data {
+        let resp_msg = msg.create_response(BodyData::EchoOk(EchoData {
             echo: echo_data.echo.clone(),
         }));
         io.send(&resp_msg);
