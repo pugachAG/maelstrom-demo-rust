@@ -3,8 +3,10 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 use serde::{Deserialize, Serialize};
 
 pub mod echo;
+pub mod broadcast;
 
 pub type MessageId = usize;
+pub type NodeId = String;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Body<T> {
@@ -17,8 +19,8 @@ pub struct Body<T> {
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct InitData {
-    pub node_id: String,
-    pub node_ids: Vec<String>,
+    pub node_id: NodeId,
+    pub node_ids: Vec<NodeId>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
