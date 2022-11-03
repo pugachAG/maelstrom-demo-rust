@@ -1,12 +1,8 @@
 use std::collections::{HashMap, HashSet};
-
-use tokio::{
-    io::{stdin, AsyncBufReadExt, BufReader, Stdin},
-    sync::oneshot,
-};
+use tokio::sync::oneshot;
 
 use crate::{
-    io::send_msg,
+    io::{send_msg, non_blocking::receive_msg},
     protocol::{broadcast::*, gen_next_msg_id, Body, MessageId, NodeId},
 };
 
@@ -25,12 +21,11 @@ struct NodeConfig {
 
 async fn main() {
     eprintln!("Running broadcast workload");
-    let mut buf_reader = BufReader::new(stdin());
-    let config = init_node(&mut buf_reader).await;
+    let config = init_node().await;
     let mut values = HashSet::<BroadcastValue>::new();
     let mut pending_ack = HashMap::<MessageId, oneshot::Sender<()>>::new();
     loop {
-        let msg = receive_msg(&mut buf_reader).await;
+        let msg: Message = receive_msg().await;
         match &msg.body.data {
             BodyData::Broadcast(ref data) => {
                 if values.insert(data.message) {
@@ -94,15 +89,15 @@ fn broadcast(
     send
 }
 
-async fn init_node(buf_reader: &mut BufReader<Stdin>) -> NodeConfig {
-    let init_msg = receive_msg(buf_reader).await;
+async fn init_node() -> NodeConfig {
+    let init_msg: Message = receive_msg().await;
     let node_id = if let BodyData::Init(ref data) = init_msg.body.data {
         send_msg(&init_msg.create_response(BodyData::InitOk));
         data.node_id.clone()
     } else {
         panic!("Expected init msg, got {:?}", init_msg);
     };
-    let topology_msg = receive_msg(buf_reader).await;
+    let topology_msg: Message = receive_msg().await;
     if let BodyData::Topology(ref data) = topology_msg.body.data {
         send_msg(&topology_msg.create_response(BodyData::TopologyOk));
         NodeConfig {
@@ -112,10 +107,4 @@ async fn init_node(buf_reader: &mut BufReader<Stdin>) -> NodeConfig {
     } else {
         panic!("Expected topolofy msg, got {:?}", topology_msg);
     }
-}
-
-async fn receive_msg(buf_reader: &mut BufReader<Stdin>) -> Message {
-    let mut buf = String::new();
-    buf_reader.read_line(&mut buf).await.unwrap();
-    serde_json::from_str(&buf).unwrap()
 }

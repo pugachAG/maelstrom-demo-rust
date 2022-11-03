@@ -1,4 +1,4 @@
-use crate::{protocol::echo::*, io::{receive_msg, send_msg}};
+use crate::{protocol::echo::*, io::{blocking::receive_msg, send_msg}};
 
 pub fn run() {
     eprintln!("Running echo workload");
