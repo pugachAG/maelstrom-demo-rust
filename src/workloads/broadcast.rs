@@ -2,7 +2,7 @@ use std::collections::{HashMap, HashSet};
 use tokio::sync::oneshot;
 
 use crate::{
-    io::{send_msg, non_blocking::receive_msg},
+    io::{non_blocking::receive_msg, send_msg},
     protocol::{broadcast::*, gen_next_msg_id, Body, MessageId, NodeId},
 };
 
@@ -26,16 +26,16 @@ async fn main() {
     let mut pending_ack = HashMap::<MessageId, oneshot::Sender<()>>::new();
     loop {
         let msg: Message = receive_msg().await;
-        match &msg.body.data {
-            BodyData::Broadcast(ref data) => {
-                if values.insert(data.message) {
+        match msg.body.data {
+            BodyData::Broadcast { message } => {
+                if values.insert(message) {
                     for dest in config
                         .neighbours
                         .iter()
                         .filter(|&node_id| msg.src.ne(node_id))
                     {
                         let msg_id = gen_next_msg_id();
-                        let send = broadcast(&config.node_id, &dest, data.message, msg_id);
+                        let send = broadcast(&config.node_id, &dest, message, msg_id);
                         pending_ack.insert(msg_id, send);
                     }
                 }
@@ -47,9 +47,9 @@ async fn main() {
                 }
             }
             BodyData::Read => {
-                send_msg(&msg.create_response(BodyData::ReadOk(ReadOkData {
+                send_msg(&msg.create_response(BodyData::ReadOk {
                     messages: values.iter().cloned().collect(),
-                })));
+                }));
             }
             _ => eprintln!("Ignoring unexpected message {:?}", msg),
         }
@@ -67,7 +67,7 @@ fn broadcast(
         dest: dest.clone(),
         body: Body {
             msg_id,
-            data: BodyData::Broadcast(BroadcastData { message: val }),
+            data: BodyData::Broadcast { message: val },
             in_reply_to: None,
         },
     };
@@ -98,10 +98,10 @@ async fn init_node() -> NodeConfig {
         panic!("Expected init msg, got {:?}", init_msg);
     };
     let topology_msg: Message = receive_msg().await;
-    if let BodyData::Topology(ref data) = topology_msg.body.data {
+    if let BodyData::Topology { ref topology } = topology_msg.body.data {
         send_msg(&topology_msg.create_response(BodyData::TopologyOk));
         NodeConfig {
-            neighbours: data.topology[&node_id].clone(),
+            neighbours: topology[&node_id].clone(),
             node_id,
         }
     } else {

@@ -133,8 +133,4 @@ impl<C: Crdt + Send + 'static> CrdtNode<C> {
             _ => panic!("Expected init msg, got {:?}", init_msg),
         }
     }
-
-    fn send_msg(msg: &Message<C>) {
-        crate::io::send_msg(msg);
-    }
 }
