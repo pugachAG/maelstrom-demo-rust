@@ -105,6 +105,6 @@ async fn init_node() -> NodeConfig {
             node_id,
         }
     } else {
-        panic!("Expected topolofy msg, got {:?}", topology_msg);
+        panic!("Expected topology msg, got {:?}", topology_msg);
     }
 }

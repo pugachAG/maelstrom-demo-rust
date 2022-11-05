@@ -4,6 +4,7 @@ use serde::{Deserialize, Serialize};
 
 pub mod echo;
 pub mod broadcast;
+pub mod crdts;
 
 pub type MessageId = usize;
 pub type NodeId = String;
