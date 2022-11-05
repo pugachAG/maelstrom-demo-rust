@@ -1,4 +1,4 @@
-use std::sync::atomic::{AtomicUsize, Ordering};
+use std::sync::atomic::{Ordering, AtomicU64};
 
 use serde::{Deserialize, Serialize};
 
@@ -6,7 +6,7 @@ pub mod echo;
 pub mod broadcast;
 pub mod crdts;
 
-pub type MessageId = usize;
+pub type MessageId = u64;
 pub type NodeId = String;
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -49,6 +49,6 @@ impl<T> Message<Body<T>> {
 }
 
 pub fn gen_next_msg_id() -> MessageId {
-    static COUNTER: AtomicUsize = AtomicUsize::new(0);
+    static COUNTER: AtomicU64 = AtomicU64::new(0);
     COUNTER.fetch_add(1, Ordering::Relaxed)
 }
