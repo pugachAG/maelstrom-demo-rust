@@ -3,6 +3,7 @@ use serde::{self, Deserialize, Serialize};
 use super::Body;
 
 pub mod g_set;
+pub mod counter;
 
 pub type Message<T, S> = crate::protocol::Message<Body<CrdtBody<T, S>>>;
 

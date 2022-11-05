@@ -11,6 +11,7 @@ fn main() {
         "echo" => workloads::echo::run(),
         "broadcast" => workloads::broadcast::run(),
         "g-set" => workloads::crdts::g_set::run(),
+        "g-counter" => workloads::crdts::g_counter::run(),
         other => panic!("Unknown workload '{}'", other),
     }
 }

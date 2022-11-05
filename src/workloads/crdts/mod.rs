@@ -13,6 +13,7 @@ use crate::{
 use serde::{de::DeserializeOwned, Serialize};
 use tokio::time::{sleep, Duration};
 
+pub mod g_counter;
 pub mod g_set;
 
 pub trait Crdt {
@@ -22,6 +23,7 @@ pub trait Crdt {
     fn handle_msg(&mut self, body: &Self::Body) -> Option<Self::Body>;
     fn update(&mut self, state: &Self::State);
     fn get_state(&self) -> Self::State;
+    fn init(&mut self, _node_id: &NodeId) {}
 }
 
 pub fn run<C: Crdt + Send + 'static>(crdt: C) {
@@ -48,9 +50,10 @@ struct CrdtNode<C: Crdt> {
 }
 
 impl<C: Crdt + Send + 'static> CrdtNode<C> {
-    pub async fn run(crdt: C) {
+    pub async fn run(mut crdt: C) {
         let config = Self::init_node().await;
         eprintln!("Node init done: {:?}", config);
+        crdt.init(&config.node_id);
         let node = CrdtNode {
             config,
             crdt: Arc::new(Mutex::new(crdt)),
