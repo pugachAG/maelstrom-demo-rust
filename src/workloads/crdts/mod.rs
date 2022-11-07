@@ -13,8 +13,9 @@ use crate::{
 use serde::{de::DeserializeOwned, Serialize};
 use tokio::time::{sleep, Duration};
 
-pub mod g_counter;
 pub mod g_set;
+pub mod g_counter;
+pub mod pn_counter;
 
 pub trait Crdt {
     type Body: Serialize + DeserializeOwned + Debug;
