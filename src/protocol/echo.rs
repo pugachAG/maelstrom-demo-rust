@@ -1,15 +1,13 @@
 use serde::{self, Deserialize, Serialize};
 use serde_json::Value;
 
-use super::{InitData, Body};
-
-pub type Message = super::Message<Body<BodyData>>;
+pub type Message = super::Message<BodyData>;
 
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 #[serde(tag = "type")]
 pub enum BodyData {
-    Init(InitData),
+    Init(super::InitData),
     InitOk,
     Echo(EchoData),
     EchoOk(EchoData),

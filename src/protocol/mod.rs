@@ -1,10 +1,11 @@
-use std::sync::atomic::{Ordering, AtomicU64};
+use std::sync::atomic::{AtomicU64, Ordering};
 
 use serde::{Deserialize, Serialize};
 
-pub mod echo;
 pub mod broadcast;
 pub mod crdts;
+pub mod datomic;
+pub mod echo;
 
 pub type MessageId = u64;
 pub type NodeId = String;
@@ -31,11 +32,11 @@ pub struct InitOkData {}
 pub struct Message<T> {
     pub src: String,
     pub dest: String,
-    pub body: T,
+    pub body: Body<T>,
 }
 
-impl<T> Message<Body<T>> {
-    pub fn create_response<D>(&self, data: D) -> Message<Body<D>> {
+impl<T> Message<T> {
+    pub fn create_response(&self, data: T) -> Message<T> {
         Message {
             src: self.dest.clone(),
             dest: self.src.clone(),

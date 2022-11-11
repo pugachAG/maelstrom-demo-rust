@@ -2,10 +2,10 @@ use std::collections::HashMap;
 
 use serde::{self, Deserialize, Serialize};
 
-use super::{Body, InitData, NodeId};
+use super::{InitData, NodeId};
 
 pub type BroadcastValue = i32;
-pub type Message = super::Message<Body<BodyData>>;
+pub type Message = super::Message<BodyData>;
 
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
