@@ -1,9 +1,11 @@
 use serde::{self, Deserialize, Serialize};
+use serde_json::Value;
 
 pub type KeyValue = u64;
 pub type ElementValue = u64;
-
 pub type Message = super::Message<BodyData>;
+
+pub const LIN_KV_SERVICE: &str = "lin-kv";
 
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
@@ -13,6 +15,20 @@ pub enum BodyData {
     InitOk,
     Txn(TxnData),
     TxnOk(TxnData),
+    CasOk,
+    Error(super::ErrorData),
+    Cas {
+        key: Value,
+        from: Value,
+        to: Value,
+        create_if_not_exists: bool,
+    },
+    Read {
+        key: Value,
+    },
+    ReadOk {
+        value: Value,
+    }
 }
 
 #[derive(Debug, Serialize, Deserialize)]

@@ -14,6 +14,7 @@ fn main() {
         "g-counter" => workloads::crdts::g_counter::run(),
         "pn-counter" => workloads::crdts::pn_counter::run(),
         "txn-list-append-single-node" => workloads::datomic::single_node::run(),
+        "txn-list-append-shared-state" => workloads::datomic::shared_state::run(),
         other => panic!("Unknown workload '{}'", other),
     }
 }

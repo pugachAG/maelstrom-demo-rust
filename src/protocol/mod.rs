@@ -12,7 +12,7 @@ pub type NodeId = String;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Body<T> {
-    pub msg_id: MessageId,
+    pub msg_id: Option<MessageId>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub in_reply_to: Option<MessageId>,
     #[serde(flatten)]
@@ -23,6 +23,32 @@ pub struct Body<T> {
 pub struct InitData {
     pub node_id: NodeId,
     pub node_ids: Vec<NodeId>,
+}
+
+#[derive(Debug, serde_repr::Serialize_repr, serde_repr::Deserialize_repr)]
+#[repr(u8)]
+pub enum ErrorCode {
+    Timeout = 0,
+    Crash = 13,
+    Abort = 14,
+    KeyDoesNotExist = 20,
+    PreconditionFailed = 22,
+    TxnConflict = 30,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct ErrorData {
+    pub text: String,
+    pub code: ErrorCode,
+}
+
+impl ErrorData {
+    pub fn new(text: &str, code: ErrorCode) -> Self {
+        Self {
+            text: text.to_string(),
+            code,
+        }
+    }
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -36,14 +62,14 @@ pub struct Message<T> {
 }
 
 impl<T> Message<T> {
-    pub fn create_response(&self, data: T) -> Message<T> {
+    pub fn create_response<R>(&self, data: R) -> Message<R> {
         Message {
             src: self.dest.clone(),
             dest: self.src.clone(),
             body: Body {
                 data,
-                msg_id: gen_next_msg_id(),
-                in_reply_to: Some(self.body.msg_id),
+                msg_id: Some(gen_next_msg_id()),
+                in_reply_to: self.body.msg_id,
             },
         }
     }

@@ -66,7 +66,7 @@ fn broadcast(
         src: src.clone(),
         dest: dest.clone(),
         body: Body {
-            msg_id,
+            msg_id: Some(msg_id),
             data: BodyData::Broadcast { message: val },
             in_reply_to: None,
         },
@@ -77,11 +77,11 @@ fn broadcast(
             send_msg(&msg);
             tokio::select! {
                 _ = &mut recv => {
-                    eprintln!("Received broadcast {} ack from {}", &msg.body.msg_id, &msg.dest);
+                    eprintln!("Received broadcast {} ack from {}", &msg.body.msg_id.unwrap(), &msg.dest);
                     break;
                 },
                 _ = tokio::time::sleep(tokio::time::Duration::from_millis(1000)) => {
-                    eprintln!("Retrying broadcast {} to {}", &msg.body.msg_id, &msg.dest);
+                    eprintln!("Retrying broadcast {} to {}", &msg.body.msg_id.unwrap(), &msg.dest);
                 },
             };
         }

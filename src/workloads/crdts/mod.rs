@@ -114,7 +114,7 @@ impl<C: Crdt + Send + 'static> CrdtNode<C> {
             src: src.clone(),
             dest: dest.clone(),
             body: Body {
-                msg_id: gen_next_msg_id(),
+                msg_id: Some(gen_next_msg_id()),
                 in_reply_to: None,
                 data: CrdtBody::Common(CommonBodyData::Replicate { state }),
             },
