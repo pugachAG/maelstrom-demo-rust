@@ -6,6 +6,7 @@ pub type ElementValue = u64;
 pub type Message = super::Message<BodyData>;
 
 pub const LIN_KV_SERVICE: &str = "lin-kv";
+pub const LWW_KV_SERVICE: &str = "lww-kv";
 
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
@@ -15,20 +16,25 @@ pub enum BodyData {
     InitOk,
     Txn(TxnData),
     TxnOk(TxnData),
-    CasOk,
-    Error(super::ErrorData),
+    Read {
+        key: Value,
+    },
+    ReadOk {
+        value: Value,
+    },
+    Write {
+        key: Value,
+        value: Value,
+    },
+    WriteOk,
     Cas {
         key: Value,
         from: Value,
         to: Value,
         create_if_not_exists: bool,
     },
-    Read {
-        key: Value,
-    },
-    ReadOk {
-        value: Value,
-    }
+    CasOk,
+    Error(super::ErrorData),
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -48,6 +54,15 @@ pub enum TxnFunc {
         key: KeyValue,
         element: ElementValue,
     },
+}
+
+impl TxnFunc {
+    pub fn key(&self) -> KeyValue {
+        match self {
+            TxnFunc::Read { key, .. } => *key,
+            TxnFunc::Append { key, .. } => *key,
+        }
+    }
 }
 
 #[derive(Debug, Serialize, Deserialize)]

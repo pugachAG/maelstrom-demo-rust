@@ -91,17 +91,17 @@ impl Handler {
                 BodyData::Error(ErrorData { text, code }) => {
                     let data = match code {
                         ErrorCode::PreconditionFailed => ErrorData::new(
-                            "Aborted due to concurrent transaction",
+                            "Aborted due to concurrent transaction".to_owned(),
                             ErrorCode::TxnConflict,
                         ),
-                        _ => ErrorData::new(&text, ErrorCode::Abort),
+                        _ => ErrorData::new(text, ErrorCode::Abort),
                     };
                     Err(data)
                 }
                 other => panic!("Expected cas_ok or error response, got {other:?}"),
             },
             None => Err(ErrorData::new(
-                "Timeout while saving the updated state",
+                "Timeout while saving the updated state".to_owned(),
                 ErrorCode::Crash,
             )),
         }
@@ -126,7 +126,7 @@ impl Handler {
                 }) => Ok(None),
                 other => panic!("Expected read_ok response, got {other:?}"),
             },
-            None => Err(ErrorData::new("Timeout reading state", ErrorCode::Abort)),
+            None => Err(ErrorData::new("Timeout reading state".to_owned(), ErrorCode::Abort)),
         }
     }
 

@@ -4,7 +4,7 @@ use crate::protocol::datomic::*;
 
 #[derive(Default, serde::Serialize, serde::Deserialize)]
 pub struct LocalState {
-    map: HashMap<KeyValue, Vec<ElementValue>>,
+    pub map: HashMap<KeyValue, Vec<ElementValue>>,
 }
 
 impl LocalState {

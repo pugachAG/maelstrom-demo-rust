@@ -25,10 +25,11 @@ pub struct InitData {
     pub node_ids: Vec<NodeId>,
 }
 
-#[derive(Debug, serde_repr::Serialize_repr, serde_repr::Deserialize_repr)]
+#[derive(Debug, PartialEq, Eq, serde_repr::Serialize_repr, serde_repr::Deserialize_repr)]
 #[repr(u8)]
 pub enum ErrorCode {
     Timeout = 0,
+    TemporarilyUnavailable = 11,
     Crash = 13,
     Abort = 14,
     KeyDoesNotExist = 20,
@@ -43,11 +44,8 @@ pub struct ErrorData {
 }
 
 impl ErrorData {
-    pub fn new(text: &str, code: ErrorCode) -> Self {
-        Self {
-            text: text.to_string(),
-            code,
-        }
+    pub fn new(text: String, code: ErrorCode) -> Self {
+        Self { text, code }
     }
 }
 
