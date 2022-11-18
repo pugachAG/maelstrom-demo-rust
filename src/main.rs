@@ -16,6 +16,7 @@ fn main() {
         "txn-list-append-single-node" => workloads::datomic::single_node::run(),
         "txn-list-append-shared-state" => workloads::datomic::shared_state::run(),
         "txn-list-append-splitted-state" => workloads::datomic::splitted_state::run(),
+        "lin-kv-single-node" => workloads::raft::single_node::run(),
         other => panic!("Unknown workload '{}'", other),
     }
 }
