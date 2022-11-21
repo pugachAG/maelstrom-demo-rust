@@ -1,7 +1,7 @@
 use crate::{
     io::{non_blocking::receive_msg, send_msg},
     protocol::{
-        raft::{BodyData, Message},
+        link_kv::{BodyData, Message},
         NodeId,
     },
 };

@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use crate::protocol::datomic::*;
+use crate::protocol::txn_list_append::*;
 
 #[derive(Default, serde::Serialize, serde::Deserialize)]
 pub struct LocalState {

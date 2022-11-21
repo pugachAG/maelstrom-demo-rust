@@ -1,6 +1,6 @@
-use super::{init_node, local_state::LocalState};
+use super::{init_node, local_state::KvStateMachine};
 use crate::io::{non_blocking::receive_msg, send_msg};
-use crate::protocol::{raft::*, ErrorData};
+use crate::protocol::{link_kv::*, ErrorData};
 
 pub fn run() {
     tokio::runtime::Builder::new_current_thread()
@@ -12,7 +12,7 @@ pub fn run() {
 
 async fn main() {
     init_node().await;
-    let mut state = LocalState::new();
+    let mut state = KvStateMachine::new();
     loop {
         let msg: Message = receive_msg().await;
         let resp_body = handle_request(&mut state, &msg.body.data);
@@ -21,7 +21,7 @@ async fn main() {
     }
 }
 
-fn handle_request(state: &mut LocalState, data: &BodyData) -> BodyData {
+fn handle_request(state: &mut KvStateMachine, data: &BodyData) -> BodyData {
     match data {
         BodyData::Read(data) => {
             handle_error(state.read(data).map(|read_ok| BodyData::ReadOk(read_ok)))

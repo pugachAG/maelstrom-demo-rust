@@ -5,7 +5,7 @@ use tokio::time::Duration;
 use super::local_state::LocalState;
 use super::{init_node, NodeConfig};
 use crate::io::{non_blocking::receive_msg, send_msg};
-use crate::protocol::{datomic::*, gen_next_msg_id, Body, ErrorCode, ErrorData};
+use crate::protocol::{txn_list_append::*, gen_next_msg_id, Body, ErrorCode, ErrorData};
 
 type SyncRespHandler = crate::io::sync_resp::SyncRespHandler<BodyData>;
 

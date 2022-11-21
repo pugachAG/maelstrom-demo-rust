@@ -1,12 +1,12 @@
 use std::collections::HashMap;
 
-use crate::protocol::{raft::*, ErrorCode, ErrorData};
+use crate::protocol::{link_kv::*, ErrorCode, ErrorData};
 
-pub struct LocalState {
+pub struct KvStateMachine {
     map: HashMap<Key, Value>,
 }
 
-impl LocalState {
+impl KvStateMachine {
     pub fn new() -> Self {
         Self {
             map: HashMap::new(),

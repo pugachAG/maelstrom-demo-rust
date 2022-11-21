@@ -13,10 +13,10 @@ fn main() {
         "g-set" => workloads::crdts::g_set::run(),
         "g-counter" => workloads::crdts::g_counter::run(),
         "pn-counter" => workloads::crdts::pn_counter::run(),
-        "txn-list-append-single-node" => workloads::datomic::single_node::run(),
-        "txn-list-append-shared-state" => workloads::datomic::shared_state::run(),
-        "txn-list-append-splitted-state" => workloads::datomic::splitted_state::run(),
-        "lin-kv-single-node" => workloads::raft::single_node::run(),
+        "txn-list-append-single-node" => workloads::txn_list_append::single_node::run(),
+        "txn-list-append-shared-state" => workloads::txn_list_append::shared_state::run(),
+        "txn-list-append-splitted-state" => workloads::txn_list_append::splitted_state::run(),
+        "lin-kv-single-node" => workloads::lin_kv::single_node::run(),
         other => panic!("Unknown workload '{}'", other),
     }
 }

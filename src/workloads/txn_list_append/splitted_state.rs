@@ -10,7 +10,7 @@ use super::{
     init_node, NodeConfig,
 };
 use crate::io::{non_blocking::receive_msg, send_msg};
-use crate::protocol::{datomic::*, ErrorData};
+use crate::protocol::{txn_list_append::*, ErrorData};
 
 type SyncRespHandler = crate::io::sync_resp::SyncRespHandler<BodyData>;
 

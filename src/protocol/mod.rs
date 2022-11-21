@@ -4,9 +4,9 @@ use serde::{Deserialize, Serialize};
 
 pub mod broadcast;
 pub mod crdts;
-pub mod datomic;
+pub mod txn_list_append;
 pub mod echo;
-pub mod raft;
+pub mod link_kv;
 
 pub type MessageId = u64;
 pub type NodeId = String;

@@ -1,7 +1,7 @@
 use std::sync::atomic::{AtomicU32, Ordering};
 
 use crate::io::{non_blocking::receive_msg, send_msg};
-use crate::protocol::{datomic::*, gen_next_msg_id, Body, ErrorCode, ErrorData, NodeId};
+use crate::protocol::{txn_list_append::*, gen_next_msg_id, Body, ErrorCode, ErrorData, NodeId};
 
 use serde_json::Value;
 

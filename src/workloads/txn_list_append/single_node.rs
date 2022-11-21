@@ -1,6 +1,6 @@
 use super::{init_node, local_state::LocalState};
 use crate::io::{non_blocking::receive_msg, send_msg};
-use crate::protocol::datomic::*;
+use crate::protocol::txn_list_append::*;
 
 pub fn run() {
     tokio::runtime::Builder::new_current_thread()
