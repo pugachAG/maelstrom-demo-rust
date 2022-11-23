@@ -1,6 +1,7 @@
 mod io;
 mod protocol;
 mod workloads;
+mod raft;
 
 fn main() {
     let args: Vec<String> = std::env::args().skip(1).collect();
