@@ -17,6 +17,7 @@ pub const DEFAULT_RPC_LATENCY: Duration = Duration::from_millis(10);
 pub const NODE_1: &str = "n1";
 pub const NODE_2: &str = "n2";
 pub const NODE_3: &str = "n3";
+pub const DEFAULT_WAIT_TIMEOUT: Duration = Duration::from_secs(60 * 60);
 
 pub struct DriverConfig {
     pub cluster: Vec<NodeId>,
@@ -107,7 +108,7 @@ impl<T: Clone + std::fmt::Debug> ClusterDriver<T> {
     pub fn start(&mut self) {
         for node in self.config.cluster.clone() {
             for effect in self.get_node(&node).raft.start() {
-                self.process_side_effect(self.time, &node, effect);
+                self.handle_side_effect(self.time, &node, effect);
             }
         }
     }
@@ -115,13 +116,24 @@ impl<T: Clone + std::fmt::Debug> ClusterDriver<T> {
     pub fn advance_time(&mut self, duration: Duration) {
         self.time += duration;
         while let Some(item) = self.pop_next_expired_event() {
-            let effects = self
-                .get_node(&item.node)
-                .process_event(item.index, item.event);
-            for effect in effects {
-                self.process_side_effect(item.time, &item.node, effect)
+            self.process_event(item);
+        }
+    }
+
+    pub fn wait<P: Fn(&mut Self) -> bool>(&mut self, f: P, timeout: Duration) -> bool {
+        let start = self.time;
+        while !f(self) {
+            if let Some(item) = self.events.pop() {
+                self.time = item.time;
+                self.process_event(item);
+            } else {
+                return false;
+            }
+            if self.time - start > timeout {
+                return false;
             }
         }
+        true
     }
 
     pub fn get_config(&self) -> &DriverConfig {
@@ -141,23 +153,20 @@ impl<T: Clone + std::fmt::Debug> ClusterDriver<T> {
         &self.nodes.get(node_id).unwrap().raft
     }
 
-    pub fn connect_node(&mut self, node_id: &NodeId) {
-        self.set_node_rpc_drop_ratio(node_id, 0.0)
+    pub fn set_rpc_drop_ratio(&mut self, node_from: NodeId, node_to: NodeId, drop_ratio: f64) {
+        *self.rpc_drop_ratio.get_mut(&(node_from, node_to)).unwrap() = drop_ratio;
     }
 
-    pub fn disconnect_node(&mut self, node_id: &NodeId) {
-        self.set_node_rpc_drop_ratio(node_id, 1.0)
-    }
-
-    fn set_node_rpc_drop_ratio(&mut self, node_id: &NodeId, ratio: f64) {
-        for ((node_from, node_to), drop_prob) in &mut self.rpc_drop_ratio {
-            if node_from == node_id || node_to == node_id {
-                *drop_prob = ratio;
-            }
+    fn process_event(&mut self, item: TimedEvent<T>) {
+        let effects = self
+            .get_node(&item.node)
+            .process_event(item.index, item.event);
+        for effect in effects {
+            self.handle_side_effect(item.time, &item.node, effect)
         }
     }
 
-    fn process_side_effect(&mut self, time: Instant, node: &NodeId, effect: SideEffect<T>) {
+    fn handle_side_effect(&mut self, time: Instant, node: &NodeId, effect: SideEffect<T>) {
         eprintln!("Processing side effect from {node}: {effect:?}");
         match effect {
             SideEffect::SetTimer { duration } => {
