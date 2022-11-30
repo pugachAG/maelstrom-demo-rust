@@ -42,6 +42,7 @@ pub struct LeaderState {
     pub replication: HashMap<NodeId, NodeReplicationState>,
 }
 
+#[derive(Debug)]
 pub enum Event<T> {
     TimerUp,
     ReceivedRpc(Rpc<T>),
@@ -55,6 +56,9 @@ pub enum SideEffect<T> {
     SendRpc {
         to: NodeId,
         rpc: Rpc<T>,
+    },
+    ValueCommitted {
+        value: T,
     }
 }
 
@@ -66,22 +70,7 @@ pub enum Rpc<T> {
     VoteResponse(VoteResponseRpc),
     ReplicateLogRequest(ReplicateLogRequestRpc<T>),
     ReplicateLogResponse(ReplicateLogResponseRpc),
-}
-
-#[derive(Debug)]
-pub struct ReplicateLogRequestRpc<T> {
-    pub leader_id: NodeId,
-    pub term: Term,
-    pub prev_log: LogEntryId,
-    pub entries: Vec<LogEntry<T>>,
-}
-
-#[derive(Debug)]
-pub struct ReplicateLogResponseRpc {
-    pub node_id: NodeId,
-    pub current_term: Term,
-    pub log_len: usize,
-    pub success: bool,
+    ProposeValueRequest(ProposeValueRequestRpc<T>),
 }
 
 #[derive(Debug)]
@@ -96,4 +85,27 @@ pub struct VoteResponseRpc {
     pub node_id: NodeId,
     pub vote_granted: bool,
     pub current_term: Term,
+}
+
+#[derive(Debug)]
+pub struct ReplicateLogRequestRpc<T> {
+    pub leader_id: NodeId,
+    pub term: Term,
+    pub prev_log: LogEntryId,
+    pub commit_len: usize,
+    pub entries: Vec<LogEntry<T>>,
+}
+
+#[derive(Debug)]
+pub struct ReplicateLogResponseRpc {
+    pub request_term: Term,
+    pub node_id: NodeId,
+    pub current_term: Term,
+    pub log_len: usize,
+    pub success: bool,
+}
+
+#[derive(Debug)]
+pub struct ProposeValueRequestRpc<T> {
+    pub value: T,
 }

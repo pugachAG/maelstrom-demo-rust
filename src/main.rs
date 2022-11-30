@@ -1,9 +1,12 @@
 mod io;
 mod protocol;
-mod workloads;
 mod raft;
+mod workloads;
 
 fn main() {
+    env_logger::builder()
+        .filter_level(log::LevelFilter::Info)
+        .init();
     let args: Vec<String> = std::env::args().skip(1).collect();
     if args.len() != 1 {
         panic!("Expected single argument, got {:?}", args);

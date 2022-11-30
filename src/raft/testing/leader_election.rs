@@ -8,9 +8,15 @@ mod leader_election_tests {
     #[test]
     pub fn initial_election() {
         let mut driver = start_default_cluster();
-        assert!(driver.wait(|driver| driver.has_leader(), DEFAULT_ELECTION_TIMEOUT * 3));
+        assert!(driver.wait(|driver| driver.has_leader(), DEFAULT_WAIT_TIMEOUT));
         let leader = driver.get_leader();
-        assert_eq!(driver.get_raft_state(&leader).get_current_term(), 1);
+        let elected_term = driver.get_raft_state(&leader).get_current_term();
+        driver.advance_time(1000 * DEFAULT_ELECTION_TIMEOUT);
+        assert_eq!(driver.get_leader(), leader);
+        assert_eq!(
+            driver.get_raft_state(&leader).get_current_term(),
+            elected_term
+        );
     }
 
     #[test]
@@ -33,6 +39,13 @@ mod leader_election_tests {
             ),
             "Failed to elected a new leader"
         );
+        let new_leader = driver
+            .get_leaders()
+            .into_iter()
+            .filter(|node| node != &initial_leader)
+            .next()
+            .unwrap();
+        let new_leader_term = driver.get_raft_state(&new_leader).get_current_term();
         driver.connect_node(initial_leader);
         assert!(
             driver.wait(
@@ -41,7 +54,10 @@ mod leader_election_tests {
             ),
             "The old leader failed to recognize the new one after reconnect"
         );
-        let new_leader = driver.get_leader();
-        assert_eq!(driver.get_raft_state(&new_leader).get_current_term(), 2);
+        assert_eq!(driver.get_leader(), new_leader);
+        assert_eq!(
+            driver.get_raft_state(&new_leader).get_current_term(),
+            new_leader_term
+        );
     }
 }

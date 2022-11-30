@@ -5,7 +5,7 @@ use std::{
 };
 
 use crate::raft::{
-    api::{Event, NodeConfig, NodeId, NodeRole, SideEffect, SideEffects},
+    api::{Event, NodeConfig, NodeId, ProposeValueRequestRpc, Rpc, SideEffect, SideEffects},
     state::RaftStateMachine,
 };
 
@@ -14,10 +14,7 @@ pub type LogEntryValue = u32;
 pub const DEFAULT_ELECTION_TIMEOUT: Duration = Duration::from_millis(200);
 pub const DEFAULT_HEARTBEAT_INTERVAL: Duration = Duration::from_millis(50);
 pub const DEFAULT_RPC_LATENCY: Duration = Duration::from_millis(10);
-pub const NODE_1: &str = "n1";
-pub const NODE_2: &str = "n2";
-pub const NODE_3: &str = "n3";
-pub const DEFAULT_WAIT_TIMEOUT: Duration = Duration::from_secs(60 * 60);
+pub const DEFAULT_WAIT_TIMEOUT: Duration = Duration::from_secs(2);
 
 pub struct DriverConfig {
     pub cluster: Vec<NodeId>,
@@ -26,10 +23,10 @@ pub struct DriverConfig {
     pub rpc_latency: Duration,
 }
 
-impl Default for DriverConfig {
-    fn default() -> Self {
+impl DriverConfig {
+    pub fn with_nodes(node_cnt: usize) -> Self {
         Self {
-            cluster: Vec::from([NODE_1, NODE_2, NODE_3].map(|s| s.to_owned())),
+            cluster: (1..=node_cnt).map(|i| format!("node_{i}")).collect(),
             election_timeout: DEFAULT_ELECTION_TIMEOUT,
             heartbeat_interval: DEFAULT_HEARTBEAT_INTERVAL,
             rpc_latency: DEFAULT_RPC_LATENCY,
@@ -37,6 +34,13 @@ impl Default for DriverConfig {
     }
 }
 
+impl Default for DriverConfig {
+    fn default() -> Self {
+        Self::with_nodes(3)
+    }
+}
+
+#[derive(Debug)]
 struct TimedEvent<T> {
     time: Instant,
     node: NodeId,
@@ -68,18 +72,19 @@ impl<T> Ord for TimedEvent<T> {
     }
 }
 
-struct NodeDriver<T> {
+struct NodeState<T> {
     node_id: NodeId,
     raft: RaftStateMachine<T>,
     next_event_index: usize,
     timer_event_index: usize,
+    committed_values: Vec<T>,
 }
 
 pub struct ClusterDriver<T> {
     config: DriverConfig,
     time: Instant,
     events: BinaryHeap<TimedEvent<T>>,
-    nodes: HashMap<NodeId, NodeDriver<T>>,
+    nodes: HashMap<NodeId, NodeState<T>>,
     rpc_drop_ratio: HashMap<(NodeId, NodeId), f64>,
 }
 
@@ -90,24 +95,26 @@ impl<T: Clone + std::fmt::Debug> ClusterDriver<T> {
             nodes: config
                 .cluster
                 .iter()
-                .map(|node_id| (node_id.clone(), NodeDriver::new(node_id, &config)))
+                .map(|node_id| (node_id.clone(), NodeState::new(node_id, &config)))
                 .collect(),
             events: BinaryHeap::new(),
-            rpc_drop_ratio: dbg!(config
+            rpc_drop_ratio: config
                 .cluster
                 .iter()
-                .flat_map(|node_from| config
-                    .cluster
-                    .iter()
-                    .map(|node_to| ((node_from.clone(), node_to.clone()), 0.0)))
-                .collect()),
+                .flat_map(|node_from| {
+                    config
+                        .cluster
+                        .iter()
+                        .map(|node_to| ((node_from.clone(), node_to.clone()), 0.0))
+                })
+                .collect(),
             config,
         }
     }
 
     pub fn start(&mut self) {
         for node in self.config.cluster.clone() {
-            for effect in self.get_node(&node).raft.start() {
+            for effect in self.get_node_mut(&node).raft.start() {
                 self.handle_side_effect(self.time, &node, effect);
             }
         }
@@ -136,21 +143,25 @@ impl<T: Clone + std::fmt::Debug> ClusterDriver<T> {
         true
     }
 
+    pub fn propose_value(&mut self, node_id: &NodeId, value: T) {
+        let time = self.time;
+        let event = self.get_node_mut(node_id).create_event(
+            time,
+            Event::ReceivedRpc(Rpc::ProposeValueRequest(ProposeValueRequestRpc { value })),
+        );
+        self.events.push(event);
+    }
+
     pub fn get_config(&self) -> &DriverConfig {
         &self.config
     }
 
-    pub fn get_leaders(&self) -> Vec<NodeId> {
-        self.config
-            .cluster
-            .iter()
-            .filter(|&node| matches!(self.get_raft_state(node).get_role(), NodeRole::Leader(_)))
-            .cloned()
-            .collect()
-    }
-
     pub fn get_raft_state(&self, node_id: &NodeId) -> &RaftStateMachine<T> {
         &self.nodes.get(node_id).unwrap().raft
+    }
+
+    pub fn get_committed_values(&self, node_id: &NodeId) -> &[T] {
+        &self.nodes.get(node_id).unwrap().committed_values
     }
 
     pub fn set_rpc_drop_ratio(&mut self, node_from: NodeId, node_to: NodeId, drop_ratio: f64) {
@@ -158,20 +169,21 @@ impl<T: Clone + std::fmt::Debug> ClusterDriver<T> {
     }
 
     fn process_event(&mut self, item: TimedEvent<T>) {
+        //eprintln!("[Driver][Event][{}][{}]: {:#?}", item.node, item.index, item.event);
         let effects = self
-            .get_node(&item.node)
+            .get_node_mut(&item.node)
             .process_event(item.index, item.event);
         for effect in effects {
+            //eprintln!("[Driver][SideEffect][{}]: {:?}", item.node, effect);
             self.handle_side_effect(item.time, &item.node, effect)
         }
     }
 
     fn handle_side_effect(&mut self, time: Instant, node: &NodeId, effect: SideEffect<T>) {
-        eprintln!("Processing side effect from {node}: {effect:?}");
         match effect {
             SideEffect::SetTimer { duration } => {
                 let timer_up_event = self
-                    .get_node(node)
+                    .get_node_mut(node)
                     .create_event(time + duration, Event::TimerUp);
                 self.events.push(timer_up_event);
             }
@@ -180,10 +192,13 @@ impl<T: Clone + std::fmt::Debug> ClusterDriver<T> {
                 if random::<f64>() > drop_prob {
                     let latency = self.config.rpc_latency;
                     let rpc_event = self
-                        .get_node(&to)
+                        .get_node_mut(&to)
                         .create_event(time + latency, Event::ReceivedRpc(rpc));
                     self.events.push(rpc_event);
                 }
+            }
+            SideEffect::ValueCommitted { value } => {
+                self.get_node_mut(node).committed_values.push(value);
             }
         }
     }
@@ -200,12 +215,12 @@ impl<T: Clone + std::fmt::Debug> ClusterDriver<T> {
         }
     }
 
-    fn get_node(&mut self, node_id: &NodeId) -> &mut NodeDriver<T> {
+    fn get_node_mut(&mut self, node_id: &NodeId) -> &mut NodeState<T> {
         self.nodes.get_mut(node_id).unwrap()
     }
 }
 
-impl<T: Clone> NodeDriver<T> {
+impl<T: Clone> NodeState<T> {
     fn new(node_id: &NodeId, config: &DriverConfig) -> Self {
         Self {
             node_id: node_id.clone(),
@@ -217,6 +232,7 @@ impl<T: Clone> NodeDriver<T> {
             }),
             next_event_index: 1,
             timer_event_index: 0,
+            committed_values: Vec::new(),
         }
     }
 
